@@ -1,0 +1,14 @@
+{
+  "name": "nico-md-links",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "md-links": "index.js"
+  },
+  "author": "",
+  "license": "ISC"
+}
