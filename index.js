@@ -1,21 +1,19 @@
 #!/usr/bin/env node
-const { log } = require('console');
 const fs = require('fs');
 const path = require('path');
+const readline = require('readline');
 
 
 function mdLinks(filePath, options) {
+
     const args = process.argv;
     const env = process.env;
     const pwd = env.PWD;
 
     // if (args.length == 3) {
     if (1) {
-
-        //1. verify that the 3rd parameter is a file:
         let argPath = args[2];
 
-        //2. verify if the filePath is absolute or relative
         const isAbsolute = path.isAbsolute(argPath);
 
         if (!isAbsolute) {
@@ -23,15 +21,24 @@ function mdLinks(filePath, options) {
         }
 
         try {
-
-            console.log(`PATH A REVISAR:::: ${argPath}`);
-
             fs.accessSync(argPath, fs.constants.R_OK);
 
             const arrFiles = getAllFiles(argPath);
 
             console.log(`ARR FILES COUNT:::: ${arrFiles.length}`);
-            console.log(`ARR FILES:::: ${arrFiles}`);
+
+            console.log('');
+            arrFiles.forEach((element) => {
+                console.log(`${element}`);
+            });
+
+            const arrLinks = getAllLinks(arrFiles);
+
+            console.log('');
+            console.log(`COUNT OF LINKS: ${arrLinks.length}`);
+            arrLinks.forEach((element) => {
+                console.log(`${element}`);
+            });
         }
         catch (error) {
             if (error.code == "ENOENT") {
@@ -44,17 +51,82 @@ function mdLinks(filePath, options) {
     }
 }
 
-function throughDirectory(directory, arrFiles) {
+function getAllLinks(arrFiles) {
+    let arrLinks = [];
+
+    arrFiles.forEach((file) => {
+        arrLinks = arrLinks.concat(getLinksFromFile(file));
+    });
+
+    return arrLinks;
+}
+
+function getLinksFromFile(file) {
+    const allFileContents = fs.readFileSync(file, 'utf-8');
+    let arrLinks = allFileContents.split(/\r?\n/);
+
+    arrLinks = arrLinks.filter((line) => {
+        return getLinkFromLine(line);
+    });
+
+    console.log(`para el archivo ${file} tenemos ${arrLinks.length} links`);
+
+    return arrLinks;
+}
+
+function getLinkFromLine(line) {
+    let character = '';
+    let bracketOpen = false;
+    let bracketContent = '';
+    let braceOpen = false;
+    let braceContent = '';
+    for (let i = 0; i < line.length; i++) {
+        character = line[i];
+
+        // square bracket
+        if (character === ']') {
+            bracketOpen = false;
+        }
+        if (bracketOpen) {
+            bracketContent += character;
+        }
+        if (character === '[') {
+            bracketOpen = true;
+        }
+        // parenthesis
+        if (character === '(' && i > 0 && bracketContent.length > 0 && line[i - 1] === ']') {
+            braceOpen = true;
+        }
+        if (braceOpen) {
+            braceContent += character;
+        }
+        if (character === ')') {
+            braceOpen = false;
+        }
+    }
+
+    //determine if there was a valid link:
+    if (bracketOpen == false && bracketContent.length > 0 && braceOpen == false && braceContent.length > 0) {
+        return line;
+    }
+    else {
+        return null;
+    }
+}
+
+function analyzeDirectory(directory, arrFiles) {
 
     fs.readdirSync(directory).forEach((file) => {
 
-        const absolute = path.join(directory, file);
+        const filePath = path.join(directory, file);
 
-        if (fs.statSync(absolute).isDirectory()) {
-            throughDirectory(absolute, arrFiles);
+        if (fs.statSync(filePath).isDirectory()) {
+            analyzeDirectory(filePath, arrFiles);
         }
         else {
-            arrFiles.push(absolute);
+            if (path.extname(filePath) === '.md') {
+                arrFiles.push(filePath);
+            }
         }
     });
 }
@@ -64,14 +136,23 @@ function getAllFiles(filePath) {
     let arrFiles = [];
 
     if (fs.statSync(filePath).isDirectory()) {
-        throughDirectory(filePath, arrFiles);
+        analyzeDirectory(filePath, arrFiles);
     }
     else {
-        arrFiles.push(filePath);
+        console.log(path.extname(filePath));
+        if (path.extname(filePath) === '.md') {
+            arrFiles.push(filePath);
+        }
     }
 
     return arrFiles;
-
 }
 
-mdLinks();
+module.exports = {
+    determineIfLineHasLink: getLinkFromLine
+}
+
+
+if (require.main === module) {
+    mdLinks();
+}
