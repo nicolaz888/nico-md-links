@@ -8,7 +8,6 @@ function mdLinks(filePath, options) {
 
     const args = process.argv;
     const env = process.env;
-    const pwd = env.PWD;
 
     // if (args.length == 3) {
     if (1) {
@@ -25,20 +24,8 @@ function mdLinks(filePath, options) {
 
             const arrFiles = getAllFiles(argPath);
 
-            console.log(`ARR FILES COUNT:::: ${arrFiles.length}`);
-
-            console.log('');
-            arrFiles.forEach((element) => {
-                console.log(`${element}`);
-            });
-
             const arrLinks = getAllLinks(arrFiles);
 
-            console.log('');
-            console.log(`COUNT OF LINKS: ${arrLinks.length}`);
-            arrLinks.forEach((element) => {
-                console.log(`${element}`);
-            });
         }
         catch (error) {
             if (error.code == "ENOENT") {
@@ -65,9 +52,18 @@ function getLinksFromFile(file) {
     const allFileContents = fs.readFileSync(file, 'utf-8');
     let arrLinks = allFileContents.split(/\r?\n/);
 
-    arrLinks = arrLinks.filter((line) => {
-        return getLinkFromLine(line);
-    });
+    //TODO: delete this block
+    // arrLinks = arrLinks.filter((line) => {
+    //     return getLinkFromLine(element);
+    // });
+
+    arrLinks = arrLinks.reduce(function (filtered, element) {
+        const link = getLinkFromLine(element);
+        if (link) {
+            filtered.push({ "file": file, "href": "hola.com", "line": link });
+        }
+        return filtered;
+    }, []);
 
     console.log(`para el archivo ${file} tenemos ${arrLinks.length} links`);
 
@@ -149,7 +145,7 @@ function getAllFiles(filePath) {
 }
 
 module.exports = {
-    determineIfLineHasLink: getLinkFromLine
+    getLinkFromLine
 }
 
 
